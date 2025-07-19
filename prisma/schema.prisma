@@ -1,0 +1,72 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+enum Role {
+  PATIENT
+  DOCTOR
+  ADMIN
+}
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  passwordHash String        // Hashed password for security
+  role         Role          // User's role for RBAC
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+ //one to one relation
+  patientProfile PatientProfile? 
+  //doctorProfile  DoctorProfile?  
+}
+
+enum gender {
+  Male
+  Female
+  Other
+}
+model PatientProfile {
+  id            String          @id @default(uuid())
+  userId        String          @unique 
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName      String
+  dateOfBirth   DateTime?       @map("date_of_birth") 
+  gender        gender?        
+  contactNumber String?         @map("contact_number")
+  address       String?
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  medicalRecords MedicalRecord[] 
+}
+
+
+model MedicalRecord {
+  id          String    @id @default(uuid())
+  patientId   String    
+  patient     PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  title       String    
+  type        String    
+  uploadDate  DateTime  @default(now())
+  fileUrl     String    
+  description String?   
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// model AccessLog {
+  
+// }
