@@ -1,98 +1,98 @@
 "use client"
-import React, { ReactEventHandler, useState } from 'react'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { serialize } from 'v8';
+import { auth } from '@/lib/firebase'; 
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
+// Make Firebase's confirmationResult globally available on the window object
+declare global {
+  interface Window {
+    recaptchaVerifier: RecaptchaVerifier;
+    confirmationResult?: ConfirmationResult;
+  }
+}
 
-
-export default function page() {
-  const [phonenumber, setphonenumber] = useState<string>("");
+export default function LoginPage() {
+  const [phonenumber, setPhonenumber] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleinput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const entereddigit = e.target.value;
-    if (
-      (entereddigit.toLowerCase() >= "a" &&
-        entereddigit.toLowerCase() <= "z") ||
-      entereddigit.length > 10
-    ) {
+  // Set up the reCAPTCHA verifier once the component mounts to ensure firebase doesn’t spam otp by bots.
+
+
+  useEffect(() => {
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      'size': 'invisible'
+    });
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+
+    if (!/^\d{10}$/.test(phonenumber)) {
+      setError("Please enter a valid 10-digit phone number.");
+      setIsLoading(false);
       return;
     }
-    setphonenumber(entereddigit);
-  };
-   const handlesubmit =async  (e: React.FormEvent<HTMLFormElement>) => {
-      try {
-        const res = await fetch("/api/auth/otp/generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phonenumber }),
-        });
 
-        if (!res.ok) {
-          const { error } = await res.json();
-          setError(error)
-        }
-        
-        router.push(`/auth/verify?phone=${phonenumber}`); 
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-   };
-    
+    try {
+      const formattedPhoneNumber = `+91${phonenumber}`;
+      const appVerifier = window.recaptchaVerifier;
+      
+      // Send OTP using Firebase
+      const confirmationResult = await signInWithPhoneNumber(auth, formattedPhoneNumber, appVerifier);
+      
+      // Store the result to use on the next page since we are making
+      window.confirmationResult = confirmationResult;
+      
+      router.push(`/auth/verify?phone=${phonenumber}`);
+
+    } catch (err: any) {
+      setError("Failed to send OTP. Please check the console for details.");
+      console.error("Firebase Auth Error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="w-screen h-screen">
-      <div className="flex w-screen h-full justify-center items-center flex-col">
-        <Tabs defaultValue="account" className="h-[80vh] w-[80vw]">
-          <TabsList>
-            <TabsTrigger value="account">Patient</TabsTrigger>
-            <TabsTrigger value="password">Password</TabsTrigger>
-          </TabsList>
-          <TabsContent className="h-full" value="account">
-            <Card>
-              <CardHeader>
-                <CardTitle>Login/SignUp</CardTitle>
-                <CardDescription className="p-1">
-                  Please Enter Your Mobile Number
-                </CardDescription>
-              </CardHeader>
-              <form onSubmit={handlesubmit}>
-                <CardContent className="grid gap-6">
-                  <div className="grid gap-3">
-                    <Label htmlFor="mobile-number">Mobile Number</Label>
-                    <Input
-                      value={phonenumber}
-                      onChange={handleinput}
-                      id="mobile-number"
-                      type="tel"
-                      placeholder="Enter 10-digit mobile number"
-                      maxLength={10}
-                    />
-                  </div>
-                </CardContent>
-                <CardFooter className='p-2'>
-                  <Button className="p-2"type="submit">Submit</Button>
-                </CardFooter>
-              </form>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+    <div className="w-screen h-screen flex justify-center items-center">
+      {/* This empty div is REQUIRED for the invisible reCAPTCHA to work */}
+      <div id="recaptcha-container"></div>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Patient Login/SignUp</CardTitle>
+          <CardDescription>Please enter your mobile number to continue.</CardDescription>
+        </CardHeader>
+        <form onSubmit={handleSubmit}>
+          <CardContent>
+            <Label htmlFor="mobile-number">Mobile Number</Label>
+            <Input
+              value={phonenumber}
+              onChange={(e) => setPhonenumber(e.target.value)}
+              id="mobile-number"
+              type="tel"
+              placeholder="10-digit mobile number"
+              maxLength={10}
+              required
+            />
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+          </CardContent>
+          <CardFooter>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? 'Sending...' : 'Send OTP'}
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
     </div>
   );
 }
