@@ -12,7 +12,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import router from 'next/router';
+import { useRouter } from 'next/navigation';
+import { serialize } from 'v8';
 
 
 
@@ -20,6 +21,7 @@ export default function page() {
   const [phonenumber, setphonenumber] = useState<string>("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const handleinput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const entereddigit = e.target.value;
@@ -42,17 +44,17 @@ export default function page() {
 
         if (!res.ok) {
           const { error } = await res.json();
-          throw new Error(error || "Failed to send OTP.");
+          setError(error)
         }
-
-        // On success, redirect to the OTP verification page
-        router.push(`api/verify?phone=${phonenumber}`);
+        
+        router.push(`/auth/verify?phone=${phonenumber}`); 
       } catch (err: any) {
         setError(err.message);
       } finally {
         setIsLoading(false);
       }
    };
+    
   return (
     <div className="w-screen h-screen">
       <div className="flex w-screen h-full justify-center items-center flex-col">
@@ -83,8 +85,8 @@ export default function page() {
                     />
                   </div>
                 </CardContent>
-                <CardFooter>
-                  <Button type="submit">Submit</Button>
+                <CardFooter className='p-2'>
+                  <Button className="p-2"type="submit">Submit</Button>
                 </CardFooter>
               </form>
             </Card>

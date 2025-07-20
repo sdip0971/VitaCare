@@ -48,6 +48,7 @@ model PatientProfile {
 
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
+  isonBoarded   Boolean       @default(false)
 
   medicalRecords MedicalRecord[] 
 }
