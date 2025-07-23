@@ -1,7 +1,20 @@
-import type { NextConfig } from "next";
+const nextConfig = {
+  // Your existing Next.js configuration goes here, for example:
+  // reactStrictMode: true,
 
-const nextConfig: NextConfig = {
-  /* config options here */
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://apis.google.com;",
+          },
+        ],
+      },
+    ];
+  },
 };
 
-export default nextConfig;
+module.exports = nextConfig;

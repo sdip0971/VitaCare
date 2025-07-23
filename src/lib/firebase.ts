@@ -1,32 +1,27 @@
-// Import the functions you need from the SDKs you need
 import { getApps, initializeApp } from "firebase/app";
-import { getAnalytics, } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
-import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+// Temporarily comment out App Check
+// import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyBr-cRzyAgdRnzBfcJPVq3_ZjuI2t4p-mE",
-  authDomain: "vitacare-a33f2.firebaseapp.com",
-  projectId: "vitacare-a33f2",
-  storageBucket: "vitacare-a33f2.firebasestorage.app",
-  messagingSenderId: "510808638072",
-  appId: "1:510808638072:web:6d1d473218ea533ff1a38d",
-  measurementId: "G-WKZYZ39QMC",
+  apiKey: "AIzaSyBOBRPzEmsFbrlqUVteVcv7A74SnpsXVqs",
+  authDomain: "vitacare-v2.firebaseapp.com",
+  projectId: "vitacare-v2",
+  storageBucket: "vitacare-v2.firebasestorage.app",
+  messagingSenderId: "1014728110624",
+  appId: "1:1014728110624:web:ca540cdca26ac1d6118245",
+  measurementId: "G-8L0VRRX8KT",
 };
-console.log(firebaseConfig.apiKey)
+
 const app =
   getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-if (typeof window !== "undefined") {
-  initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider(
-      "6LcmzosrAAAAACfr2qdGEjmFg9zu9dzrpxKw01ze"
-    ),
-    isTokenAutoRefreshEnabled: true,
-  });
-}
+
+// Temporarily disable App Check initialization
+// const appCheck = initializeAppCheck(app, {
+//   provider: new ReCaptchaEnterpriseProvider(
+//     "6Lf9cowrAAAALq2oolE6DLWNzb7YNuhkzjuv2O2"
+//   ),
+//   isTokenAutoRefreshEnabled: true
+// });
+
 export const auth = getAuth(app);
