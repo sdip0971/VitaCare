@@ -18,7 +18,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import Error from "next/error";
 
 declare global {
   interface Window {
@@ -70,6 +69,20 @@ export default function LoginPage() {
     const cleaned = value.replace(/\D/g, "");
     return cleaned.slice(0, 10); // Limit to 10 digits
   }, []);
+  useEffect(() => {
+    // Force testing mode in development
+    if (process.env.NODE_ENV === "development") {
+      // Multiple ways to enable testing mode
+      try {
+        (auth as any).settings = { appVerificationDisabledForTesting: true };
+        auth.settings.appVerificationDisabledForTesting = true;
+
+        console.log("🔧 Testing mode force-enabled");
+      } catch (error) {
+        console.log("Testing mode setup:", error);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const initializeRecaptcha = async () => {
@@ -100,13 +113,8 @@ export default function LoginPage() {
           await window.recaptchaVerifier.render();
           setIsRecaptchaReady(true);
           console.log("reCAPTCHA initialized successfully");
-        } catch (error:Error) {
+        } catch (error) {
           console.error("reCAPTCHA initialization error:", error);
-          console.error("Error details:", {
-            code: error.code,
-            message: error.message,
-            stack: error.stack,
-          });
           setError(
             "Failed to initialize security check. Please refresh the page."
           );

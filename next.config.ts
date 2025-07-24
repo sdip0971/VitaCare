@@ -1,15 +1,14 @@
+/** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Your existing Next.js configuration goes here, for example:
-  // reactStrictMode: true,
-
   async headers() {
     return [
       {
-        source: "/:path*",
+        source: "/(.*)",
         headers: [
           {
             key: "Content-Security-Policy",
-            value: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://apis.google.com;",
+            value:
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://apis.google.com https://www.googletagmanager.com",
           },
         ],
       },

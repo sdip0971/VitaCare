@@ -38,7 +38,7 @@ function VerifyFormComponent() {
       const result = await window.confirmationResult.confirm(otp);
       const idToken = await result.user.getIdToken();
 
-      // Hand off to our secure backend
+  
       const res = await fetch("/api/auth/firebase-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -54,7 +54,9 @@ function VerifyFormComponent() {
       if (data.isOnboarded) {
         router.push("/dashboard");
       } else {
-        router.push("/onboarding");
+        const token = data.onboardingToken;
+
+        router.push(`/onboarding?token=${token}`);
       }
     } catch (err: any) {
       setError(err.message || "The code you entered is invalid.");
@@ -64,15 +66,15 @@ function VerifyFormComponent() {
   };
 
   return (
-    <div className="flex w-screen h-full justify-center items-center flex-col">
-      <Card>
+    <div className="flex w-screen  h-[80vh] justify-center items-center flex-col">
+      <Card className="  w-[50vw]">
         <CardHeader>
           <CardTitle>Verify OTP</CardTitle>
           <CardDescription>
             Enter the 6-digit code sent to +91{phoneNumber}
           </CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
+        <form className=''onSubmit={handleSubmit}>
           <CardContent>
             <Label htmlFor="otp">Verification Code</Label>
             <Input
@@ -86,7 +88,7 @@ function VerifyFormComponent() {
             />
             {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
           </CardContent>
-          <CardFooter>
+          <CardFooter className="mt-2">
             <Button type="submit" disabled={isLoading}>
               {isLoading ? "Verifying..." : "Verify & Continue"}
             </Button>

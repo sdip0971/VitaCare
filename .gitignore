@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+vitacare-v2-firebase-adminsdk-*.json
+vitacare-v3-firebase-adminsdk-fbsvc-87fee49246*.json

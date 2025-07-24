@@ -1,26 +1,24 @@
-// src/app/api/auth/firebase-login/route.ts
-import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import jwt from "jsonwebtoken";
-import { cookies } from "next/headers";
-
-// Initialize Firebase Admin (you'll need to install firebase-admin)
 import admin from "firebase-admin";
-
-// Initialize Firebase Admin SDK (add this to your environment variables)
+import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
+import redis from "@/lib/redis";
+import { cookies } from "next/headers";
+// Initialize Firebase Admin SDK with correct project
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
+      projectId: "vitacare-v3", // ✅ Make sure this matches your client config
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
       privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
     }),
+    projectId: "vitacare-v3", // ✅ Explicit project ID
   });
 }
 
-export async function POST(req: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { idToken } = await req.json();
+    const { idToken } = await request.json();
 
     if (!idToken) {
       return NextResponse.json(
@@ -29,7 +27,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Verify the Firebase ID token
+    // Verify the Firebase ID token with correct project
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     const phoneNumber = decodedToken.phone_number;
 
@@ -40,84 +38,52 @@ export async function POST(req: Request) {
       );
     }
 
-    // Extract phone number without country code for database lookup
-    const cleanPhoneNumber = phoneNumber.replace("+91", "");
-
-    // Check if user exists in database
-    let user = await prisma.user.findFirst({
+    // if user exist we create a session and log him to dashboard else we throw him to a form on onboarded page to fill out required details
+    const patientProfile = await prisma.patientProfile.findUnique({
       where: {
-        OR: [
-          { email: phoneNumber }, // Store phone as email for now
-          {
-            patientProfile: {
-              contactNumber: cleanPhoneNumber,
-            },
-          },
-        ],
+        contactNumber: phoneNumber,
       },
       include: {
-        patientProfile: true,
+        user: true,
       },
     });
+    if (patientProfile && patientProfile.isonBoarded) {
+       //Case-1 User exist and isOnboarded
+      const sessionToken = crypto.randomBytes(32).toString("hex");
+      const sessionKey = `session:${sessionToken}`;
+      const sessionExpiry = 60 * 60 * 24 * 7; // 7 days
 
-    let isOnboarded = false;
+      await redis.set(sessionKey, JSON.stringify({ patientProfile: patientProfile }), 'EX', sessionExpiry);
 
-    if (!user) {
-      // Create new user if doesn't exist
-      user = await prisma.user.create({
-        data: {
-          email: phoneNumber,
-          passwordHash: "", // Not needed for phone auth
-          role: "PATIENT",
-          patientProfile: {
-            create: {
-              fullName: "New User", // Will be updated during onboarding
-              contactNumber: cleanPhoneNumber,
-              isonBoarded: false,
-            },
-          },
-        },
-        include: {
-          patientProfile: true,
-        },
+      (await cookies()).set("session_token", sessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        maxAge: sessionExpiry,
+        path: "/",
       });
-    } else {
-      isOnboarded = user.patientProfile?.isonBoarded || false;
-    }
+      //we are setting on boarded flag to true this is something we will use to redirect to frontend
 
-    // Create JWT token for your app
-    const jwtToken = jwt.sign(
-      {
-        userId: user.id,
-        role: user.role,
-        phoneNumber: cleanPhoneNumber,
-      },
-      process.env.JWT_SECRET || "your-secret-key",
-      { expiresIn: "7d" }
-    );
+      return NextResponse.json({ success: true, isOnboarded: true });
+  } 
+  else{
+    //Case2 User is not onBoarded
+      const onboardingToken = crypto.randomBytes(32).toString("hex");
+      const onboardingKey = `onboarding:${onboardingToken}`;
 
-    // Set HTTP-only cookie
-    const cookieStore = await cookies();
-    cookieStore.set("auth-token", jwtToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-    });
+      // Store the verified phone number with this token for 10 minutes
+      // This is like a flag so that we can verify that if person trying to onboard is valid or not
+      await redis.set(onboardingKey, phoneNumber, "EX", 600);
 
-    return NextResponse.json({
-      success: true,
-      isOnboarded,
-      user: {
-        id: user.id,
-        role: user.role,
-        phoneNumber: cleanPhoneNumber,
-      },
-    });
-  } catch (error) {
+      return NextResponse.json({
+        success: true,
+        isOnboarded: false,
+        onboardingToken: onboardingToken,
+      });
+  }
+}catch (error: any) {
     console.error("Firebase login error:", error);
     return NextResponse.json(
-      { error: "Authentication failed" },
+      { error: "Authentication failed", details: error.message },
       { status: 500 }
     );
   }

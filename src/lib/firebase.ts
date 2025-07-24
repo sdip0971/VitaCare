@@ -1,27 +1,37 @@
-import { getApps, initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-// Temporarily comment out App Check
-// import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
+// lib/firebase.ts - COMPLETE REPLACEMENT
+import { initializeApp } from "firebase/app";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBOBRPzEmsFbrlqUVteVcv7A74SnpsXVqs",
-  authDomain: "vitacare-v2.firebaseapp.com",
-  projectId: "vitacare-v2",
-  storageBucket: "vitacare-v2.firebasestorage.app",
-  messagingSenderId: "1014728110624",
-  appId: "1:1014728110624:web:ca540cdca26ac1d6118245",
-  measurementId: "G-8L0VRRX8KT",
+  apiKey: "AIzaSyCQbBd1hnaIMdoDRrKNcEe4W_ontH91MNU",
+  authDomain: "vitacare-v3.firebaseapp.com",
+  projectId: "vitacare-v3",
+  storageBucket: "vitacare-v3.firebasestorage.app",
+  messagingSenderId: "784796711395",
+  appId: "1:784796711395:web:b110dd6453fbcb328448d6",
+  measurementId: "G-6Y69PDWZNH",
 };
 
-const app =
-  getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
 
-// Temporarily disable App Check initialization
-// const appCheck = initializeAppCheck(app, {
-//   provider: new ReCaptchaEnterpriseProvider(
-//     "6Lf9cowrAAAALq2oolE6DLWNzb7YNuhkzjuv2O2"
-//   ),
-//   isTokenAutoRefreshEnabled: true
-// });
-
+// Initialize Firebase Authentication and get a reference to the service
 export const auth = getAuth(app);
+
+// 🔧 TESTING MODE for Development
+if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+  // Method 1: Disable app verification for testing
+  if (auth.settings) {
+    auth.settings.appVerificationDisabledForTesting = true;
+  }
+
+  // Method 2: Alternative approach
+  (auth as any).settings = {
+    appVerificationDisabledForTesting: true,
+  };
+
+  console.log("🔧 Development testing mode enabled");
+  console.log("🔧 App verification disabled for localhost testing");
+}
+
+export default app;
