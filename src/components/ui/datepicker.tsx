@@ -1,3 +1,5 @@
+// src/components/ui/datepicker.tsx
+
 "use client";
 
 import * as React from "react";
@@ -37,6 +39,11 @@ export function DatePicker({ date, setDate }: DatePickerProps) {
           mode="single"
           selected={date}
           onSelect={setDate}
+   
+          captionLayout="dropdown"
+          fromYear={1960}
+          toYear={new Date().getFullYear()}
+          // ✅ END OF NEW PROPS
           initialFocus
         />
       </PopoverContent>
