@@ -115,7 +115,7 @@ const token = searchParams.get("token");
         throw new Error(error || "Failed to create account.");
       }
 
-      router.push("/dashboard");
+      router.push("/patient/dashboard");
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -169,7 +169,7 @@ const token = searchParams.get("token");
                 </SelectTrigger>
                 <SelectContent>
                     {bloodgrps.map((bloodgroup,index)=>{
-                        return <SelectItem value={`${bloodgroup}`}>{bloodgroup}</SelectItem>;
+                        return <SelectItem key={bloodgroup} value={`${bloodgroup}`}>{bloodgroup}</SelectItem>;
                     })}
                 </SelectContent>
               </Select>

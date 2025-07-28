@@ -52,7 +52,7 @@ function VerifyFormComponent() {
       const data = await res.json();
 
       if (data.isOnboarded) {
-        router.push("/dashboard");
+        router.push("/patient/dashboard");
       } else {
         const token = data.onboardingToken;
 

@@ -18,6 +18,10 @@ enum Role {
   DOCTOR
   ADMIN
 }
+//The reason for creating a common user table is that 
+//1)We don't have to repeat common fields like createdAt or role in three different tables
+//2)f we want to add a new type of user later (like a "Pharmacist"), we just add a new Role to the enum and create a PharmacistProfile table.
+//3)it's much easier to manage permissions. We can write rules based on the role in the single User table.
 model User {
   id           String        @id @default(uuid())      
   role         Role         
@@ -47,6 +51,7 @@ enum bloodgroup {
 model PatientProfile {
   id            String          @id @default(uuid())
   userId        String          @unique 
+  patientuuid   String        @unique 
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   fullName      String
   dateOfBirth   DateTime?       @map("date_of_birth") 

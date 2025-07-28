@@ -19,6 +19,45 @@ const patientSchema = z.object({
   profilePictureUrl: z.string().url().optional().nullable(),
   onboardingToken: z.string().min(1, "Onboarding token is required."),
 });
+function mapBloodGroupToEnum(displayValue: string): bloodgroup {
+  const mapping: Record<string, bloodgroup> = {
+    "O+": "O_POSITIVE",
+    "O-": "O_NEGATIVE",
+    "A+": "A_POSITIVE",
+    "A-": "A_NEGATIVE",
+    "B+": "B_POSITIVE",
+    "B-": "B_NEGATIVE",
+    "AB+": "AB_POSITIVE",
+    "AB-": "AB_NEGATIVE",
+  };
+
+  return mapping[displayValue] as bloodgroup;
+}
+// when we create uuid we need to ensure it is unique not already in db if already in 
+async function generateUniquePatientId(): Promise<string> {
+  let attempts = 0;
+  const maxAttempts = 10;
+
+  while (attempts < maxAttempts) {
+    // Simple crypto approach - 8 character hex string
+    const patientId = crypto.randomBytes(4).toString("hex").toUpperCase();
+
+    // Check if this ID already exists
+    const existingPatient = await prisma.patientProfile.findUnique({
+      where: { patientuuid: patientId },
+    });
+
+    if (!existingPatient) {
+      return patientId;
+    }
+
+    attempts++;
+  }
+
+  throw new Error(
+    "Unable to generate unique patient ID after maximum attempts"
+  );
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -69,15 +108,17 @@ export async function POST(req: NextRequest) {
         { status: 409 }
       );
     }
-
+    const patientuuid = await generateUniquePatientId()
+   const bloodGroupEnum = mapBloodGroupToEnum(Bloodgroup);
     const newUser = await prisma.user.create({
       data: {
         role: Role.PATIENT,
         patientProfile: {
           create: {
             fullName,
-            BloodGroup: Bloodgroup as bloodgroup,
+            BloodGroup: bloodGroupEnum as bloodgroup,
             contactNumber: phoneNumber,
+            patientuuid:patientuuid,
             dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
             gender: gender,
             address: address || null,
