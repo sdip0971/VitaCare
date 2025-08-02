@@ -1,4 +1,4 @@
-// src/app/api/patient/medical-records/generate-upload-url/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { getStorage } from "firebase-admin/storage";
 import admin from "firebase-admin";
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     const [signedUrl] = await file.getSignedUrl({
       version: "v4",
       action: "write",
-      expires: Date.now() + 15 * 60 * 1000, // 15-minute expiry
+      expires: Date.now() + 15 * 60 * 1000, 
       contentType: contentType,
     });
 

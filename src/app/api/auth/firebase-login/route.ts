@@ -4,17 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import redis from "@/lib/redis";
 import { cookies } from "next/headers";
-// Initialize Firebase Admin SDK with correct project
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: "vitacare-v3", // ✅ Make sure this matches your client config
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    }),
-    projectId: "vitacare-v3", // ✅ Explicit project ID
-  });
-}
+import { adminAuth } from "@/lib/firebase-admin";
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify the Firebase ID token with correct project
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const decodedToken = await adminAuth.verifyIdToken(idToken);
     const phoneNumber = decodedToken.phone_number;
 
     if (!phoneNumber) {

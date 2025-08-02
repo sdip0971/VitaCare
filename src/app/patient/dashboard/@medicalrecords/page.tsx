@@ -128,8 +128,8 @@ function medicalrecords() {
            </div>
          </CardHeader>
 
-         <CardContent className="w-full h-full space-y-3 pt-0">
-         <PatientRecords medicalRecords = {records}/>
+         <CardContent className="w-full h-full overflow-y-scroll space-y-3 pt-0">
+         <PatientRecords medicalRecords = {records} setRecords={setRecords} />
          </CardContent>
        </Card>
      </div>
