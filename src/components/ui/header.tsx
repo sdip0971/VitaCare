@@ -1,14 +1,18 @@
-'use server'
-import React from "react";
+'use client'
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation"; // For App Router (new style)
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/user";
+import { useAuth } from "./AuthProvider";
+import { useRouter } from "next/navigation";
+function Header() {
+  const router = useRouter()
+const { user, logout } = useAuth();
+  const handleLogout = async () => {
+    await logout();
+    router.push('/home')
+  };
 
-async function Header() {
-
-  const user = await getCurrentUser()
-  console.log(user)
   return (
     <div>
       <header className="bg-white py-4 px-6 shadow-sm border-b border-gray-200">
@@ -21,10 +25,7 @@ async function Header() {
           </div>
           {user ? (
             <div className="flex items-center space-x-4">
-              <Link href="/auth">
-                <Button variant="ghost">Log Out</Button>
-              </Link>
-              
+                <Button onClick={handleLogout} variant="ghost">Log Out</Button>
             </div>
           ) : (
             <div className="flex items-center space-x-4">

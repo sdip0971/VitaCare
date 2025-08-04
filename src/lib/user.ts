@@ -5,9 +5,8 @@ import { cookies } from "next/headers";
 import { prisma } from "./prisma";
 
 export const getCurrentUser = cache(
-  async (): Promise<PatientProfile | null> => {
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get("session_token")?.value;
+  async (sessionToken :string): Promise<PatientProfile | null> => {
+  
 
     if (!sessionToken) {
       return null;

@@ -39,7 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
+/src/lib/firebase-admin.ts
 /src/generated/prisma
 
 vitacare-v2-firebase-adminsdk-*.json

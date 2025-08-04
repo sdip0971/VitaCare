@@ -2,30 +2,45 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, X, ZoomIn, ZoomOut } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Data } from "../../../view/[recordId]/page";
 import { MedicalRecord } from "@/generated/prisma";
-interface DirectViewerProps {
-  params: { recordId: string };
+
+interface ViewRecordProps {
+  params: Promise<{ recordId: string }>;
 }
 
+export interface Data {
+  signedUrl: string;
+  record: MedicalRecord;
+}
 
-export default function DirectViewer({ params }: DirectViewerProps) {
+export default function ViewRecord({ params }: ViewRecordProps) {
   const router = useRouter();
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [record, setRecord] = useState<MedicalRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+  const [recordId, setRecordId] = useState<string | null>(null);
 
-   useEffect(() => {
+  useEffect(() => {
+    const getParams = async () => {
+      const resolvedParams = await params;
+      setRecordId(resolvedParams.recordId);
+    };
+    getParams();
+  }, [params]);
+
+  useEffect(() => {
     const fetchCompleteData = async () => {
+      if (!recordId) return;
+      
       try {
+        setLoading(true);
+        setError(null);
 
-        
         const response = await fetch(
-          `/api/patient/medical-records/view?recordId=${params.recordId}`
+          `/api/patient/medical-records/view?recordId=${recordId}`
         );
 
         if (!response.ok) {
@@ -34,18 +49,18 @@ export default function DirectViewer({ params }: DirectViewerProps) {
         }
 
         const data: Data = await response.json();
-        
-        setRecord(data.record);
-        setSignedUrl(data.signedUrl)
 
+        setRecord(data.record);
+        setSignedUrl(data.signedUrl);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
         setLoading(false);
       }
-}
-}
-,[params.recordId])
+    };
+
+    fetchCompleteData();
+  }, [recordId]);
 
   const renderFileContent = () => {
     if (!signedUrl || !record) return null;
@@ -53,18 +68,18 @@ export default function DirectViewer({ params }: DirectViewerProps) {
     const fileType = record.type.toLowerCase();
     const fileName = record.title.toLowerCase();
 
-    // we check if PDF File
+    // PDF File
     if (fileType === "application/pdf" || fileName.endsWith(".pdf")) {
       return (
         <iframe
-          src={`${signedUrl}`}
+          src={signedUrl}
           className="w-full h-full border-0 rounded"
           title="PDF Viewer"
         />
       );
     }
 
-
+    // Image File
     if (
       fileType.startsWith("image/") ||
       /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(fileName)
@@ -79,6 +94,8 @@ export default function DirectViewer({ params }: DirectViewerProps) {
         </div>
       );
     }
+
+    // Text File
     if (
       fileType.startsWith("text/") ||
       /\.(txt|csv|json|xml)$/i.test(fileName)
@@ -91,6 +108,8 @@ export default function DirectViewer({ params }: DirectViewerProps) {
         />
       );
     }
+
+    // Other files - use Google Docs viewer
     return (
       <iframe
         src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true`}
@@ -99,6 +118,7 @@ export default function DirectViewer({ params }: DirectViewerProps) {
       />
     );
   };
+
   if (loading) {
     return (
       <div className="container mx-auto p-4 h-screen flex items-center justify-center">
@@ -109,6 +129,7 @@ export default function DirectViewer({ params }: DirectViewerProps) {
       </div>
     );
   }
+
   if (error) {
     return (
       <div className="container mx-auto p-4 h-screen flex items-center justify-center">
@@ -119,73 +140,27 @@ export default function DirectViewer({ params }: DirectViewerProps) {
       </div>
     );
   }
- const closeModal = () => {
-   console.log("🔙 Closing modal");
-   router.back();
- };
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) closeModal();
-  };
-
-   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={handleBackdropClick}
-    >
-      <div 
-        className="relative w-[95vw] h-[95vh] max-w-6xl bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-    
-        <div className="flex items-center justify-between p-4 border-b bg-white rounded-t-xl shrink-0">
-          <div className="flex-1 min-w-0 mr-4">
-            <h2 className="text-lg font-semibold truncate">
-              {record?.title || "Medical Record"}
-            </h2>
-          </div>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={closeModal}
-            className="h-9 w-9 hover:bg-gray-100"
-            title="Close (Esc)"
-          >
-            <X className="h-4 w-4" />
+  return (
+    <div className="h-screen flex flex-col">
+      <div className="flex items-center justify-between p-4 border-b bg-white">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <Button variant="outline" size="icon" onClick={() => router.push("/patient/dashboard")}>
+            <ArrowLeft className="h-4 w-4" />
           </Button>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl font-semibold truncate">{record?.title}</h1>
+            {record && (
+              <p className="text-sm text-gray-500">
+                {new Date(record.uploadDate).toLocaleDateString()}
+              </p>
+            )}
+          </div>
         </div>
-        <div className="flex-1 p-4 bg-gray-50 overflow-hidden">
-          {loading && (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-                <p className="text-lg font-medium text-gray-700">Loading file...</p>
-              </div>
-            </div>
-          )}
-              {error && (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center max-w-md">
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <X className="h-8 w-8 text-red-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to Load File</h3>
-                <p className="text-sm text-red-600 mb-4">{error}</p>
-                <Button onClick={closeModal} variant="outline">Close</Button>
-              </div>
-            </div>
-          )}
-
-          {record && !loading && !error && (
-            <div className="w-full h-full">
-              {renderFileContent()}
-            </div>
-          )}
-        </div>
+      </div>
+      <div className="flex-1 p-4 bg-gray-50 overflow-hidden">
+        <div className="w-full h-full">{renderFileContent()}</div>
       </div>
     </div>
   );
 }
-
-

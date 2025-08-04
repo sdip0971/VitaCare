@@ -12,6 +12,7 @@ import { bloodgroup } from "@/generated/prisma";
 import Image from "next/image";
 import Link from "next/link";
 import { Copy } from "lucide-react";
+import { cookies } from "next/headers";
 
 const bloodGroupDisplay: Record<bloodgroup, string> = {
   O_POSITIVE: "O+",
@@ -40,7 +41,14 @@ const calculateAge = (dob: Date | null): number | string => {
 };
 
 export default async function PatientCardPage() {
-  const patient = await getCurrentUser();
+    const cookieStore = await cookies();
+   const sessionToken = cookieStore.get("session_token")?.value;
+   let patient;
+   if(!sessionToken){
+    patient = null;
+   } else {
+    patient = await getCurrentUser(sessionToken);
+   }
 
   if (!patient) {
     return (

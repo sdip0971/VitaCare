@@ -10,6 +10,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // // Ensure user has patient role
+    // if (currentUser. !== "PATIENT") {
+    //   return NextResponse.json(
+    //     { error: "Access denied: Patient role required" },
+    //     { status: 403 }
+    //   );
+    // }
+
     const { searchParams } = new URL(req.url);
     const recordId = searchParams.get("recordId");
 
@@ -36,16 +44,18 @@ export async function GET(req: NextRequest) {
     }
 
   
-    const bucket = adminStorage.bucket();
+    const bucket = adminStorage.bucket("vitacare-v3.firebasestorage.app");
     const fileUrl = record.fileUrl;
+    
+    console.log(`Processing file URL: ${fileUrl}`);
 
   
     let filePath: string;
     if (fileUrl.includes("storage.googleapis.com")) {
+
       const urlParts = fileUrl.split("/");
       const bucketIndex = urlParts.findIndex(
-        (part) =>
-          part.includes("vitacare-v3") || part.includes(".firebasestorage.app")
+        (part) => part.includes("vitacare-v3.firebasestorage.app")
       );
       filePath = urlParts.slice(bucketIndex + 1).join("/");
     } else if (fileUrl.includes("firebasestorage.googleapis.com")) {
@@ -59,14 +69,32 @@ export async function GET(req: NextRequest) {
       throw new Error("Could not extract file path from URL");
     }
 
+    console.log(`Extracted file path: ${filePath}`);
+    console.log(`Bucket name: ${bucket.name}`);
+    
     const file = bucket.file(filePath);
 
+    // Check if file exists before generating signed URL
+    const [exists] = await file.exists();
+    if (!exists) {
+      console.error(`File does not exist: ${filePath}`);
+      return NextResponse.json(
+        { error: "File not found in storage" },
+        { status: 404 }
+      );
+    }
+
     // we will create a signed url expires in 1 hr so that user can view this file this is required by firebase
+    console.log("🔑 Generating signed URL for file:", filePath);
+    console.log("🪣 Using bucket:", bucket.name);
+    
     const [signedUrl] = await file.getSignedUrl({
       version: "v4",
       action: "read",
       expires: Date.now() + 60 * 60 * 1000,
     });
+    
+    console.log("✅ Generated signed URL successfully");
 
 
     return NextResponse.json({
@@ -84,9 +112,8 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error in combined view endpoint:", error);
     return NextResponse.json(
-      { error: "Failed to load file data" },
+      { error: `Failed to load file data: ${error instanceof Error ? error.message : 'Unknown error'}` },
       { status: 500 }
     );
   }
