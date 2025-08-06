@@ -39,7 +39,7 @@ async function generateUniquePatientId(): Promise<string> {
   const maxAttempts = 10;
 
   while (attempts < maxAttempts) {
-    // Simple crypto approach - 8 character hex string
+  // 8 character hex string
     const patientId = crypto.randomBytes(4).toString("hex").toUpperCase();
 
     // Check if this ID already exists

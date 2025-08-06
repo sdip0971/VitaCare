@@ -68,9 +68,6 @@ export async function GET(req: NextRequest) {
     if (!filePath) {
       throw new Error("Could not extract file path from URL");
     }
-
-    console.log(`Extracted file path: ${filePath}`);
-    console.log(`Bucket name: ${bucket.name}`);
     
     const file = bucket.file(filePath);
 
@@ -85,9 +82,7 @@ export async function GET(req: NextRequest) {
     }
 
     // we will create a signed url expires in 1 hr so that user can view this file this is required by firebase
-    console.log("🔑 Generating signed URL for file:", filePath);
-    console.log("🪣 Using bucket:", bucket.name);
-    
+
     const [signedUrl] = await file.getSignedUrl({
       version: "v4",
       action: "read",

@@ -9,7 +9,7 @@ export async function GET() {
       if(!sessionToken){
         return NextResponse.json({ user: null }, { status: 401 });
       }
-    const user = await getCurrentUser(sessionToken);
+    const user = await getCurrentUser();
     if(user==null){
         return NextResponse.json({ user: null }, { status: 401 });
     }

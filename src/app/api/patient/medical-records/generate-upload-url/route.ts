@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStorage } from "firebase-admin/storage";
 import admin from "firebase-admin";
 import { getCurrentUser } from "@/lib/user";
+import { cookies } from "next/headers";
 const projectId = process.env.FIREBASE_PROJECT_ID;
 const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
 const privateKey = process.env.FIREBASE_PRIVATE_KEY;
@@ -22,6 +23,8 @@ if (!admin.apps.length) {
 
 export async function POST(req: NextRequest) {
   try {
+    const cookieStore = await cookies();
+     const sessionToken = cookieStore.get("session_token")?.value;
   
     const currentUser = await getCurrentUser();
     if (!currentUser) {

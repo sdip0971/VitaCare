@@ -13,6 +13,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Copy } from "lucide-react";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 const bloodGroupDisplay: Record<bloodgroup, string> = {
   O_POSITIVE: "O+",
@@ -25,7 +26,7 @@ const bloodGroupDisplay: Record<bloodgroup, string> = {
   AB_NEGATIVE: "AB-",
 };
 
-const calculateAge = (dob: Date | null): number | string => {
+const calculateAge = cache((dob: Date | null): number | string => {
   if (!dob) return "N/A";
   const birthDate = new Date(dob);
   const today = new Date();
@@ -38,7 +39,7 @@ const calculateAge = (dob: Date | null): number | string => {
     age--;
   }
   return age;
-};
+})
 
 export default async function PatientCardPage() {
     const cookieStore = await cookies();
@@ -47,7 +48,7 @@ export default async function PatientCardPage() {
    if(!sessionToken){
     patient = null;
    } else {
-    patient = await getCurrentUser(sessionToken);
+    patient = await getCurrentUser();
    }
 
   if (!patient) {

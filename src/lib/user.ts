@@ -4,7 +4,7 @@ import redis from "./redis";
 import { cookies } from "next/headers";
 import { prisma } from "./prisma";
 
-export const getCurrentUser = cache(
+export const getUser = cache(
   async (sessionToken :string): Promise<PatientProfile | null> => {
   
 
@@ -41,3 +41,15 @@ export const getCurrentUser = cache(
     }
   }
 );
+export const getCurrentUser = async ()=>{
+  const cookieStore = await cookies();
+  const sessionToken = cookieStore.get("session_token")?.value;
+
+  if (!sessionToken) {
+    return null;
+  }
+
+  const user = await getUser(sessionToken);
+  return user;
+
+}

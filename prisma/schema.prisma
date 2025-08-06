@@ -30,7 +30,7 @@ model User {
 
  //one to one relation with patient and doctor profile
   patientProfile PatientProfile? 
-  //doctorProfile  DoctorProfile?  
+  doctorProfile  DoctorProfile?  
 }
 
 enum gender {
@@ -67,6 +67,38 @@ model PatientProfile {
 
   medicalRecords MedicalRecord[] 
 }
+
+model DoctorProfile {
+  id               String          @id @default(uuid())
+   userId        String          @unique 
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Basic Information
+  fullName          String
+  dateOfBirth       DateTime?       @map("date_of_birth")
+  gender            gender?
+  contactNumber     String?         @unique @map("contact_number")
+  email             String          @unique
+  password          String         @map("password_hash")
+  
+
+  licenseNumber     String          @unique @map("license_number")
+  specialization    String
+  qualification     String[]        
+  yearsOfExperience Int             @map("years_of_experience")
+  hospitalName      String?         @map("hospital_name")
+  hospitalAddress   String?         @map("hospital_address")
+  departmentName    String?         @map("department_name")
+  profilePictureUrl String?         @map("profile_picture_url")     
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  // // Relations
+  // permissionRequests PermissionRequest[] @relation("DoctorPermissions")
+  // appointments      Appointment[]
+  // prescriptions     Prescription[]
+}
+
 
 
 model MedicalRecord {
