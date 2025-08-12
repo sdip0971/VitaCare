@@ -204,20 +204,25 @@ export default function LoginPage() {
         }
         
         // Doctor authentication API call
-        const response = await fetch('/api/auth/login', {
+        const response = await fetch('/api/doctor/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ email, password }),
         });
-
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.message || 'Login failed');
+          setError(errorData || "Login failed. Please try again.");
         }
+      
 
         const data = await response.json();
+        if(data.error){
+          setError(data.error)
+          return
+        }
+        console.log("Doctor login successful:", data);
         router.push('/doctor/dashboard')
         
       }
@@ -284,7 +289,7 @@ export default function LoginPage() {
         <Button
           type="submit"
           disabled={isLoading || (currentTab === 'patient' && (!isRecaptchaReady || !phoneNumber))}
-          className="w-full"
+          className="w-full mt-2" 
         >
           {isLoading ? (
             <>
@@ -357,7 +362,7 @@ export default function LoginPage() {
         <Button
           type="submit"
           disabled={isLoading || !email || !password}
-          className="w-full"
+          className="w-full mt-2"
         >
           {isLoading ? (
             <>

@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useAuth } from "@/components/ui/AuthProvider";
 
 function VerifyFormComponent() {
   const [otp, setOtp] = useState("");
@@ -22,7 +23,7 @@ function VerifyFormComponent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const phoneNumber = searchParams.get("phone");
-
+const {login} = useAuth()
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -52,7 +53,9 @@ function VerifyFormComponent() {
       const data = await res.json();
 
       if (data.isOnboarded) {
+        await login();
         router.push("/patient/dashboard");
+
       } else {
         const token = data.onboardingToken;
 
@@ -74,7 +77,7 @@ function VerifyFormComponent() {
             Enter the 6-digit code sent to +91{phoneNumber}
           </CardDescription>
         </CardHeader>
-        <form className=''onSubmit={handleSubmit}>
+        <form className='' onSubmit={handleSubmit}>
           <CardContent>
             <Label htmlFor="otp">Verification Code</Label>
             <Input

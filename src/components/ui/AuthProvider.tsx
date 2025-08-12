@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User } from "@/types/types";
+import { usePathname } from "next/navigation";
 interface AuthContextType {
   user: User | null;
     login: () => Promise<void>;
@@ -20,11 +21,15 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
-
+    const pathname = usePathname();
 const login = async () => {
   try {
     const response = await fetch("/api/user/current");
     const data = await response.json();
+  
+    if(data.status === 401){
+      setUser(null)
+    }
     setUser(data.user || null);
   } catch (error) {
     console.error("Login error:", error);
@@ -40,6 +45,13 @@ const login = async () => {
   const isAuthenticated = !!user;
 
   useEffect(() => {
+     const publicRoutes = ["/auth/login", "/auth/verify", "/home", "/"];
+
+     
+     if (publicRoutes.includes(pathname)) {
+       setUser(null);
+       return;
+     }
     login(); 
   }, []);
 

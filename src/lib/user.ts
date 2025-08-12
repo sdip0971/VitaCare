@@ -1,11 +1,11 @@
-import { PatientProfile } from "@/generated/prisma";
+import { PatientProfile,DoctorProfile } from "@/generated/prisma";
 import { cache } from "react";
 import redis from "./redis";
 import { cookies } from "next/headers";
 import { prisma } from "./prisma";
 
 export const getUser = cache(
-  async (sessionToken :string): Promise<PatientProfile | null> => {
+  async (sessionToken :string): Promise<PatientProfile | null | DoctorProfile> => {
   
 
     if (!sessionToken) {
@@ -26,15 +26,28 @@ export const getUser = cache(
         return null;
       }
 
-      const patientProfile = await prisma.patientProfile.findFirst({
+      const user = await prisma.user.findFirst({
         where: {
-          user: {
             id: userId,
-          },
+        },
+        include: {
+          patientProfile: true,
+          doctorProfile: true,
         },
       });
+      if(!user){
+        return null;
+      }
+      if (user.role === "PATIENT") {
+        return user.patientProfile as PatientProfile;
+      }
+      if (user.role === "DOCTOR") {
+        console.log("doctorprofile",user.doctorProfile)
+        return user.doctorProfile as DoctorProfile;
+      }
+      return null;
 
-      return patientProfile;
+      // return patientProfile;
     } catch (error) {
       console.error("Failed to parse session data:", error);
       return null;

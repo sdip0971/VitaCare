@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 function Header() {
   const router = useRouter()
 const { user, logout } = useAuth();
+
   const handleLogout = async () => {
     await logout();
     router.push('/home')
@@ -29,7 +30,7 @@ const { user, logout } = useAuth();
             </div>
           ) : (
             <div className="flex items-center space-x-4">
-              <Link href="/auth">
+              <Link href="/auth/login">
                 <Button variant="ghost">Log in</Button>
               </Link>
               <Link href="/auth?tab=register">

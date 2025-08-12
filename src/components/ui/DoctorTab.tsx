@@ -82,6 +82,9 @@ export default function DoctorRegisterForm() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
+     if(name === "yearsOfExperience" && value<'0') {
+      return;
+     }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
