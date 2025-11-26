@@ -23,24 +23,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Patient not found" }, { status: 404 });
     }
 
-    const permission = await prisma.permissionRequest.upsert({
-      where: {
-        doctorId_patientId: {
-          doctorId: doctor.id,
-          patientId: patient.id,
-        },
-      },
-      update: {
-        status: "PENDING",
-      },
-      create: {
-        doctorId: doctor.id,
-        patientId: patient.id,
-        status: "PENDING",
-      },
-    });
+   const existingPermission = await prisma.permissionRequest.findUnique({
+     where: {
+       doctorId_patientId: {
+         doctorId: doctor.id,
+         patientId: patient.id,
+       },
+     },
+   });
 
+   
+   if (existingPermission && existingPermission.status === "APPROVED") {
+     return NextResponse.json({
+       success: true,
+       status: "APPROVED",
+       patientId: patient.id,
+     });
+   }
 
+   const permission = await prisma.permissionRequest.upsert({
+     where: {
+       doctorId_patientId: {
+         doctorId: doctor.id,
+         patientId: patient.id,
+       },
+     },
+     update: { status: "PENDING" },
+     create: {
+       doctorId: doctor.id,
+       patientId: patient.id,
+       status: "PENDING",
+     },
+   });
     sendNotificationtoUser(patient.userId, {
       type: "ACCESS_REQUESTED",
       message: `Dr. ${doctor.fullName} has requested access to your medical records.`,

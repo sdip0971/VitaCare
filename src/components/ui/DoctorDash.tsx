@@ -14,57 +14,55 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { DoctorProfile } from "@/generated/prisma";
 import { useSocket } from "@/contexts/ws-context";
+import { useRouter } from "next/navigation";
 
 interface DoctorDashProps {
   doctor: DoctorProfile;
 }
 
 function DoctorDash({ doctor }: DoctorDashProps) {
-   const [patientUuid, setPatientUuid] = useState("");
+ 
+   const [patientIdInput, setPatientIdInput] = useState("");
    const [status, setStatus] = useState<string | null>(null);
    const { notifications } = useSocket();
-  const [patientId, setPatientId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const handleRequestAccess = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStatus(null);
+  const router = useRouter();
 
-    try {
-      const res = await fetch("/api/doctor/access/request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ patientUuid }),
-      });
+const handleSearch = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!patientIdInput.trim()) return;
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+  setIsLoading(true);
+  setError(null);
 
+  try {
+    const res = await fetch("/api/doctor/access/request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ patientUuid: patientIdInput.toUpperCase() }),
+    });
 
-    } catch (err: any) {
-      setStatus(`Error: ${err.message}`);
-    }
-  };
+    const data = await res.json();
 
-
-  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!patientId.trim()) {
-      setError("Please enter a patient ID.");
+    if (!res.ok) {
+      // "if patient doesnt exist we throw error"
+      setError(data.error || "Patient not found.");
+      setIsLoading(false);
       return;
     }
-    setIsLoading(true);
-    setError(null);
 
-
-    console.log("Searching for patient with ID:", patientId);
-
-
-    setTimeout(() => {
-      setIsLoading(false);
-      alert(`Navigating to records for patient: ${patientId}`);
-    }, 1000);
-  };
+    // Logic: "redirect to waiting page as soon as doctor enters patients id"
+    if (data.status === "APPROVED") {
+      router.push(`/doctor/patient/${data.patientId}`);
+    } else {
+      router.push(`/doctor/patient/${data.patientId}/waiting`);
+    }
+  } catch (err: any) {
+    setError("Network error occurred.");
+    setIsLoading(false);
+  }
+};
 
   return (
     <main className="min-h-screen w-full flex flex-col p-4 md:p-6 lg:p-8">
@@ -84,22 +82,23 @@ function DoctorDash({ doctor }: DoctorDashProps) {
               Enter a patient's unique ID to access their medical records.
             </CardDescription>
           </CardHeader>
-          <form onSubmit={handleSearch}>
+       <form onSubmit={handleSearch}>
             <CardContent>
               <div className="grid gap-2">
-                <Label htmlFor="patientId">Patient ID</Label>
+                <Label htmlFor="patientId">Patient UUID</Label>
                 <Input
                   id="patientId"
-                  placeholder="Enter Patient ID (e.g., 8A3D4F1B)"
-                  value={patientId}
-                  onChange={(e) => setPatientId(e.target.value.toUpperCase())}
+                  placeholder="e.g. 8A3D4F1B"
+                  value={patientIdInput}
+                  onChange={(e) => setPatientIdInput(e.target.value)}
+                  disabled={isLoading}
                 />
               </div>
-              {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
+              {error && <p className="text-sm text-red-500 mt-4 font-semibold">{error}</p>}
             </CardContent>
             <CardFooter>
-              <Button type="submit" className="w-full mt-2" disabled={isLoading}>
-                {isLoading ? "Searching..." : "Search Patient"}
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Verifying..." : "Request Access"}
               </Button>
             </CardFooter>
           </form>
