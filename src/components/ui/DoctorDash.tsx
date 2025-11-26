@@ -13,15 +13,39 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { DoctorProfile } from "@/generated/prisma";
+import { useSocket } from "@/contexts/ws-context";
 
 interface DoctorDashProps {
   doctor: DoctorProfile;
 }
 
 function DoctorDash({ doctor }: DoctorDashProps) {
+   const [patientUuid, setPatientUuid] = useState("");
+   const [status, setStatus] = useState<string | null>(null);
+   const { notifications } = useSocket();
   const [patientId, setPatientId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const handleRequestAccess = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus(null);
+
+    try {
+      const res = await fetch("/api/doctor/access/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patientUuid }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+
+    } catch (err: any) {
+      setStatus(`Error: ${err.message}`);
+    }
+  };
+
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

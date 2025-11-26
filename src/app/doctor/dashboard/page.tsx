@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import DoctorDash from "@/components/ui/DoctorDash";
 
 export default async function DoctorDashboardPage() {
+  
   const user = await getCurrentUser();
 
   if (!user) {

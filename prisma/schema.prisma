@@ -9,9 +9,16 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
+enum PermissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REVOKED
+}
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url = env("DATABASE_URL")
+
 }
 enum Role {
   PATIENT
@@ -64,6 +71,7 @@ model PatientProfile {
   emergencyContacts Json?     @map("emergency_contacts")
   BloodGroup bloodgroup    
   isonBoarded Boolean @default(false)   
+  permissionRequests PermissionRequest[]
 
   medicalRecords MedicalRecord[] 
 }
@@ -92,6 +100,7 @@ model DoctorProfile {
   profilePictureUrl String?         @map("profile_picture_url")     
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
+  permissionRequests PermissionRequest[]
   
   // // Relations
   // permissionRequests PermissionRequest[] @relation("DoctorPermissions")
@@ -114,6 +123,20 @@ model MedicalRecord {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+}
+model PermissionRequest {
+  id        String           @id @default(uuid())
+  doctorId  String
+  patientId String
+  status    PermissionStatus @default(PENDING)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  doctor    DoctorProfile  @relation(fields: [doctorId], references: [id])
+  patient   PatientProfile @relation(fields: [patientId], references: [id])
+
+  // Ensure a doctor sends only one request per patient
+  @@unique([doctorId, patientId])
 }
 
 // model AccessLog {
