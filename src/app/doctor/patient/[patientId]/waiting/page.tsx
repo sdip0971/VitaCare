@@ -24,6 +24,7 @@ export default function WaitingPage({
 
       if (data.type === "ACCESS_APPROVED") {
         setStatus("Access Granted! Redirecting...");
+        
         setTimeout(() => {
           router.replace(`/doctor/patient/${patientId}`);
         }, 1000);

@@ -70,6 +70,7 @@ export async function POST(req: NextRequest) {
       message: "Access request sent to patient.",
       status: permission.status,
     });
+    
   } catch (error) {
     console.error("Access Request Error:", error);
     return NextResponse.json(

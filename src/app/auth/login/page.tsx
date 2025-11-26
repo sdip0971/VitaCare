@@ -115,7 +115,15 @@ export default function LoginPage() {
           }
         }
       } else if (currentTab === "doctor") {
+
         setIsRecaptchaReady(false);
+        if (window.recaptchaVerifier) {
+          try {
+            window.recaptchaVerifier.clear(); // <--- This stops the "Expired" timer
+            window.recaptchaVerifier = undefined;
+          } catch (e) {
+            console.warn("Failed to clear recaptcha", e);
+          }
       }
     };
 
@@ -131,6 +139,7 @@ export default function LoginPage() {
         window.recaptchaVerifier = undefined;
         setIsRecaptchaReady(false);
       }
+    }
     };
   }, [currentTab]);
 

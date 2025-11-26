@@ -54,9 +54,9 @@ const handleSearch = async (e: React.FormEvent) => {
 
     // Logic: "redirect to waiting page as soon as doctor enters patients id"
     if (data.status === "APPROVED") {
-      router.push(`/doctor/patient/${data.patientId}`);
+      router.push(`/doctor/patient/${patientIdInput}`);
     } else {
-      router.push(`/doctor/patient/${data.patientId}/waiting`);
+      router.push(`/doctor/patient/${patientIdInput}/waiting`);
     }
   } catch (err: any) {
     setError("Network error occurred.");
@@ -97,7 +97,7 @@ const handleSearch = async (e: React.FormEvent) => {
               {error && <p className="text-sm text-red-500 mt-4 font-semibold">{error}</p>}
             </CardContent>
             <CardFooter>
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full mt-4 " disabled={isLoading}>
                 {isLoading ? "Verifying..." : "Request Access"}
               </Button>
             </CardFooter>
