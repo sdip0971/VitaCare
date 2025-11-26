@@ -5,7 +5,7 @@ const redis = new Redis({
   password: process.env.REDIS_PASSWORD,
   maxRetriesPerRequest: 3,
   retryStrategy: (times) => Math.min(times * 50, 2000),
-  enableOfflineQueue: false,
+  enableOfflineQueue: true,
 });
 
 redis.on("error", (err) => {

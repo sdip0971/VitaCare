@@ -19,6 +19,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/components/ui/AuthProvider";
 
 declare global {
   interface Window {
@@ -37,18 +38,16 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const recaptchaContainerRef = useRef<HTMLDivElement>(null);
-  
-  // Get current tab from URL params, default to "patient"
+  const { login } = useAuth();
+
   const currentTab = searchParams.get("tab") || "patient";
 
-  // Enhanced phone number validation
   const validatePhoneNumber = useCallback((phone: string): boolean => {
     const cleaned = phone.replace(/\D/g, "");
     const indianMobileRegex = /^[6-9]\d{9}$/;
     return indianMobileRegex.test(cleaned);
   }, []);
 
-  // Email validation
   const validateEmail = useCallback((email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
@@ -56,17 +55,18 @@ export default function LoginPage() {
 
   const formatPhoneNumber = useCallback((value: string): string => {
     const cleaned = value.replace(/\D/g, "");
-    return cleaned.slice(0, 10); 
+    return cleaned.slice(0, 10);
   }, []);
-  useEffect(() => {
-    // Force testing mode in development
-    if (process.env.NODE_ENV === "development") {
-      // Multiple ways to enable testing mode
-      try {
-        (auth as any).settings = { appVerificationDisabledForTesting: true };
-        auth.settings.appVerificationDisabledForTesting = true;
 
-        console.log("🔧 Testing mode force-enabled");
+  // Setup Firebase for testing mode on localhost
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      try {
+        // @ts-ignore
+        auth.settings.appVerificationDisabledForTesting = true;
+        console.log(
+          "🔧 Firebase Testing Mode Enabled (No actual SMS will be sent for Test Numbers)"
+        );
       } catch (error) {
         console.log("Testing mode setup:", error);
       }
@@ -75,10 +75,16 @@ export default function LoginPage() {
 
   useEffect(() => {
     const initializeRecaptcha = async () => {
-      // Only initialize reCAPTCHA for patient tab
-      if (currentTab === 'patient' && !window.recaptchaVerifier && recaptchaContainerRef.current) {
+      if (
+        currentTab === "patient" &&
+        !window.recaptchaVerifier &&
+        recaptchaContainerRef.current
+      ) {
         try {
-          console.log("Initializing reCAPTCHA for patient tab...");
+          // Clean up any existing instance first
+          if (window.recaptchaVerifier) {
+            (window.recaptchaVerifier as RecaptchaVerifier).clear();
+          }
 
           window.recaptchaVerifier = new RecaptchaVerifier(
             auth,
@@ -86,7 +92,7 @@ export default function LoginPage() {
             {
               size: "normal",
               callback: (response: string) => {
-                console.log("reCAPTCHA resolved successfully", response);
+                console.log("reCAPTCHA resolved");
                 setIsRecaptchaReady(true);
               },
               "expired-callback": () => {
@@ -96,23 +102,19 @@ export default function LoginPage() {
               },
             }
           );
+
           await window.recaptchaVerifier.render();
           setIsRecaptchaReady(true);
-      
         } catch (error) {
           console.error("reCAPTCHA initialization error:", error);
-          setError("Failed to initialize security check. Please refresh the page.");
-        }
-      } else if (currentTab === 'doctor') {
-        // Clear reCAPTCHA for doctor tab and set ready state for faster loading
-        if (window.recaptchaVerifier) {
-          try {
-            window.recaptchaVerifier.clear();
-            window.recaptchaVerifier = undefined;
-          } catch (error) {
-            console.warn("Error clearing reCAPTCHA:", error);
+          // Even if Recaptcha fails visually in dev, we might be able to proceed if appVerificationDisabledForTesting is true
+          if (process.env.NODE_ENV === "development") {
+            setIsRecaptchaReady(true);
+          } else {
+            setError("Failed to initialize security check. Please refresh.");
           }
         }
+      } else if (currentTab === "doctor") {
         setIsRecaptchaReady(false);
       }
     };
@@ -120,42 +122,39 @@ export default function LoginPage() {
     initializeRecaptcha();
 
     return () => {
-      // Cleanup only if switching away from patient tab or component unmounting
-      if (window.recaptchaVerifier && currentTab !== 'patient') {
+      if (window.recaptchaVerifier && currentTab !== "patient") {
         try {
-          window.recaptchaVerifier.clear();
-        } catch (error) {
-          console.warn("Error clearing reCAPTCHA:", error);
-        } finally {
-          window.recaptchaVerifier = undefined;
-          setIsRecaptchaReady(false);
+          (window.recaptchaVerifier as RecaptchaVerifier).clear();
+        } catch (e) {
+          console.warn(e);
         }
+        window.recaptchaVerifier = undefined;
+        setIsRecaptchaReady(false);
       }
     };
   }, [currentTab]);
 
   const handleTabChange = (value: string) => {
-
     const params = new URLSearchParams(searchParams);
     params.set("tab", value);
     router.push(`/auth/login?${params.toString()}`);
   };
 
-  const handlePhoneNumberChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhoneNumber(e.target.value);
     setPhoneNumber(formatted);
-    setError(""); // Clear error when user starts typing
-  }, [formatPhoneNumber]);
+    setError("");
+  };
 
-  const handleEmailChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
-    setError(""); // Clear error when user starts typing
-  }, []);
+    setError("");
+  };
 
-  const handlePasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPassword(e.target.value);
-    setError(""); // Clear error when user starts typing
-  }, []);
+    setError("");
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -163,80 +162,66 @@ export default function LoginPage() {
     setError("");
 
     try {
-      if (currentTab === 'patient') {
-        // Patient login with phone number and OTP
+      if (currentTab === "patient") {
         if (!validatePhoneNumber(phoneNumber)) {
-          throw new Error(
-            "Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9."
-          );
+          throw new Error("Please enter a valid 10-digit mobile number.");
         }
 
-        // Check if reCAPTCHA is ready
+        // 🟢 FIX: REMOVED THE "IF DEV MODE RETURN" BLOCK.
+        // We now ALWAYS proceed to the real Firebase call below.
+
         if (!window.recaptchaVerifier || !isRecaptchaReady) {
-          throw new Error(
-            "Security verification is not ready. Please wait a moment and try again."
-          );
+          // In dev mode with testing enabled, we might not strictly need invisible recaptcha ready state
+          if (process.env.NODE_ENV !== "development") {
+            throw new Error("Security verification is not ready.");
+          }
         }
 
         const formattedPhoneNumber = `+91${phoneNumber}`;
         console.log("Sending OTP to:", formattedPhoneNumber);
 
-        // Use the reCAPTCHA verifier with signInWithPhoneNumber
+        // This generates a REAL verification ID from Firebase
         const confirmationResult = await signInWithPhoneNumber(
           auth,
           formattedPhoneNumber,
           window.recaptchaVerifier
         );
 
-        window.confirmationResult = confirmationResult;
+        // Store the real ID
+        sessionStorage.setItem(
+          "verificationId",
+          confirmationResult.verificationId
+        );
+        sessionStorage.setItem("phoneNumber", phoneNumber);
 
-        // Navigate to verification page
+        // Remove this flag so verify page behaves correctly
+        sessionStorage.removeItem("isDevelopmentMode");
+
         router.push(`/auth/verify?phone=${phoneNumber}`);
-        
-      } else if (currentTab === 'doctor') {
-        // Doctor login with email and password
-        if (!validateEmail(email)) {
-          throw new Error("Please enter a valid email address.");
-        }
+      } else if (currentTab === "doctor") {
+        if (!validateEmail(email)) throw new Error("Invalid email.");
+        if (password.length < 6) throw new Error("Password too short.");
 
-        if (password.length < 6) {
-          throw new Error("Password must be at least 6 characters long.");
-        }
-        
-        // Doctor authentication API call
-        const response = await fetch('/api/doctor/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+        const response = await fetch("/api/doctor/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
         });
-        if (!response.ok) {
-          const errorData = await response.json();
-          setError(errorData || "Login failed. Please try again.");
-        }
-      
 
         const data = await response.json();
-        if(data.error){
-          setError(data.error)
-          return
+        if (!response.ok || data.error) {
+          throw new Error(data.error || "Login failed.");
         }
-        console.log("Doctor login successful:", data);
-        router.push('/doctor/dashboard')
-        
+
+        await login();
+        router.push("/doctor/dashboard");
       }
     } catch (error: any) {
-      const errorMessage = error.message;
-      setError(errorMessage);
-
-   
-      if (currentTab === 'patient' && window.recaptchaVerifier) {
-        try {
-          await window.recaptchaVerifier.render();
-        } catch (renderError) {
-          console.error("Error re-rendering reCAPTCHA:", renderError);
-        }
+      console.error(error);
+      setError(error.message);
+      // Reset recaptcha on error so user can try again
+      if (currentTab === "patient" && window.recaptchaVerifier) {
+        window.recaptchaVerifier.render().catch(console.error);
       }
     } finally {
       setIsLoading(false);
@@ -264,60 +249,16 @@ export default function LoginPage() {
             />
           </div>
         </div>
-
-        {/* reCAPTCHA container - only for patients */}
-        {currentTab === 'patient' && (
-          <div
-            ref={recaptchaContainerRef}
-            className="flex justify-center my-4"
-          />
-        )}
-
+        <div ref={recaptchaContainerRef} className="flex justify-center my-4" />
         {error && (
           <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
             {error}
           </div>
         )}
-
-        {currentTab === 'patient' && !isRecaptchaReady && !error && (
-          <div className="p-3 text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-md">
-            Initializing security verification...
-          </div>
-        )}
       </CardContent>
       <CardFooter>
-        <Button
-          type="submit"
-          disabled={isLoading || (currentTab === 'patient' && (!isRecaptchaReady || !phoneNumber))}
-          className="w-full mt-2" 
-        >
-          {isLoading ? (
-            <>
-              <svg
-                className="animate-spin -ml-1 mr-3 h-4 w-4 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Sending OTP...
-            </>
-          ) : (
-            "Send OTP as Patient"
-          )}
+        <Button type="submit" disabled={isLoading} className="w-full mt-2">
+          {isLoading ? "Sending OTP..." : "Send OTP as Patient"}
         </Button>
       </CardFooter>
     </form>
@@ -331,27 +272,21 @@ export default function LoginPage() {
           <Input
             value={email}
             onChange={handleEmailChange}
-            id="email"
             type="email"
-            placeholder="doctor@example.com"
             required
             disabled={isLoading}
           />
         </div>
-
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
           <Input
             value={password}
             onChange={handlePasswordChange}
-            id="password"
             type="password"
-            placeholder="Enter your password"
             required
             disabled={isLoading}
           />
         </div>
-
         {error && (
           <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
             {error}
@@ -359,38 +294,8 @@ export default function LoginPage() {
         )}
       </CardContent>
       <CardFooter>
-        <Button
-          type="submit"
-          disabled={isLoading || !email || !password}
-          className="w-full mt-2"
-        >
-          {isLoading ? (
-            <>
-              <svg
-                className="animate-spin -ml-1 mr-3 h-4 w-4 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Logging in...
-            </>
-          ) : (
-            "Login as Doctor"
-          )}
+        <Button type="submit" disabled={isLoading} className="w-full mt-2">
+          {isLoading ? "Logging in..." : "Login as Doctor"}
         </Button>
       </CardFooter>
     </form>
@@ -401,23 +306,20 @@ export default function LoginPage() {
       <Card className="w-full max-w-md mx-4">
         <CardHeader>
           <CardTitle>Login/SignUp</CardTitle>
-          <CardDescription>
-            Please select your role and enter your details to continue.
-          </CardDescription>
+          <CardDescription>Select your role to continue.</CardDescription>
         </CardHeader>
-        
-        <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
-          <div className="px-6">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="patient">Patient</TabsTrigger>
-              <TabsTrigger value="doctor">Doctor</TabsTrigger>
-            </TabsList>
-          </div>
-          
+        <Tabs
+          value={currentTab}
+          onValueChange={handleTabChange}
+          className="w-full"
+        >
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="patient">Patient</TabsTrigger>
+            <TabsTrigger value="doctor">Doctor</TabsTrigger>
+          </TabsList>
           <TabsContent value="patient" className="mt-4">
             {renderPatientForm()}
           </TabsContent>
-          
           <TabsContent value="doctor" className="mt-4">
             {renderDoctorForm()}
           </TabsContent>
